@@ -26,6 +26,7 @@
      (when game-state
        (doseq [[player-id client-chan] @clients-atom]
          (>! client-chan (-> game-state
+                             (assoc :player-id player-id)
                              pr-str)))
        (recur (<! game-state-channel))))
    (println "Exiting game state emitter loop")))

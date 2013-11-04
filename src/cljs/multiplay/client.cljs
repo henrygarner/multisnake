@@ -25,49 +25,33 @@
       38 :up
       39 :right
       40 :down
-      87 :up
-      83 :down
+      87 :orbit-up
+      83 :orbit-down
+      65 :orbit-left
+      68 :orbit-right
       nil)))
 
 (defn bind-key-observer
   [command-chan]
   (go (while true
-        (<! (timeout 50))
+        (<! (timeout 100))
         (case @key-down
           :up   (>! command-chan [:player/up])
           :down (>! command-chan [:player/down])
           :left (>! command-chan [:player/left])
           :right (>! command-chan [:player/right])
+          :orbit-up (>! command-chan [:player/orbit-up])
+          :orbit-down (>! command-chan [:player/orbit-down])
+          :orbit-left (>! command-chan [:player/orbit-left])
+          :orbit-right (>! command-chan [:player/orbit-right])
           :not-matched)))
   (.addEventListener js/window "keydown"
                      (fn [e]
-                       (.log js/console e)
+                       ;; (.log js/console e)
                        (reset! key-down (key-event->command e))))
   (.addEventListener js/window "keyup"
                      (fn [e]
                        (reset! key-down nil))))
-
-;; button click event bindings
-
-(def clicked (atom nil))
-
-(defn bind-arrow-click
-  [command-chan]
-  (go (while true
-        (<! (timeout 50))
-        (case @clicked
-          :up   (>! command-chan [:player/up])
-          :down (>! command-chan [:player/down])
-          :not-matched)))
-  (goog.events/listen (goog.dom/getElement "up-arrow") "touchstart"
-                      #(reset! clicked :up))
-  (goog.events/listen (goog.dom/getElement "up-arrow") "touchend"
-                      #(reset! clicked nil))
-
-  (goog.events/listen (goog.dom/getElement "down-arrow") "touchstart"
-                      #(reset! clicked :down))
-  (goog.events/listen (goog.dom/getElement "down-arrow") "touchend"
-                      #(reset! clicked nil)))
 
 ;; client process
 (defn receive-websocket
@@ -90,12 +74,9 @@
 
 ;; main js entry point
 
-(defn ^:export run
-  []
-  (.log js/console "pong!")
+(defn ^:export run []
   (let [render-channel (multiplay.views.arena/create!)
         {:keys [ws-send ws-receive]} (websocket/connect! (str "ws://" host))
         command-channel (chan)]
     (spawn-client-process! ws-send ws-receive command-channel render-channel)
-    (bind-key-observer command-channel)
-    (bind-arrow-click command-channel)))
+    (bind-key-observer command-channel)))

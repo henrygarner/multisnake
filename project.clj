@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/clojurescript "0.0-1909"]
+                 [org.clojure/clojurescript "0.0-1913"]
 
                  ;; because we needed to be on the bleeding edge and
                  ;; latest snapshot was nowhere to be found
@@ -28,7 +28,13 @@
                 :compiler {:libs ["src/js"]
                            :output-to "resources/public/multiplay.js"
                            :pretty-print true
-                           :optimizations :whitespace}}]}
+                           :optimizations :whitespace
+                           :foreign-libs [{:file "resources/public/three.js"
+                                           :provides ["three"]}
+                                          {:file "resources/public/tween.js"
+                                           :provides ["tween"]}]
+                           :externs ["resources/public/externs.js"
+                                     "resources/public/tween-extern.js"]}}]}
   :profiles {:dev
              {:source-paths ["dev"]
               :dependencies [[org.clojure/tools.namespace "0.2.3"]

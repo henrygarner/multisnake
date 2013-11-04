@@ -25,7 +25,7 @@
      (>! command-chan [:player/join id name])
      (loop [msg (<! ws-out)]
        (if msg
-         (let [command (edn/read-string msg)]
+         (let [command (edn/read-string msg)]           
            (>! command-chan (conj command id))
            (recur (<! ws-out)))
          (do (>! command-chan [:player/leave id])
