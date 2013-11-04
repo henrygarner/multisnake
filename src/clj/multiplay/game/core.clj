@@ -2,29 +2,16 @@
   (:require [multiplay.game.params :refer [game-dimension]]
             [clojure.set :refer [difference]]))
 
-(def number-of-apples 5)
+(def number-of-apples 1)
 
-(def initial-game-state
-   {:apples (set (for [x [0 (dec game-dimension)]
+(comment (set (for [x [0 (dec game-dimension)]
                        y [0 (dec game-dimension)]
                        z [0 (dec game-dimension)]]
-                   [x y z]))
+                   [x y z])))
+
+(def initial-game-state
+   {:apples #{}
     :snakes []})
-
-(def dirs {:right [1 0]
-           :left [-1 0]
-           :up [0 -1]
-           :down [0 1]})
-
-(defn random-color
-  ([]
-     (->> #(+ 127 (rand-int 127))
-          (repeatedly 3)
-          vec))
-  ([forbidden]
-     (let [colors (repeatedly #(random-color))
-           forbidden (set forbidden)]
-       (->> colors distinct (remove forbidden) first))))
 
 (defn neib-cell [cell dir]
   (let [[new-x new-y new-z] (map + cell dir)]
@@ -53,9 +40,7 @@
   (map #(-> (:body %) first (collapse d)) snakes))
 
 (def orientation->collapsed-dir
-  {0 2
-   1 0
-   2 1})
+  {0 2 1 0 2 1})
 
 (defn move-snake [{:keys [body dir orientation] :as snake} apples]
   (let [new-head (neib-cell (first body) dir)
@@ -99,61 +84,13 @@
         snake {:body [snake-head]
                :dir [0 1 0]
                :id id
-               :rotation [0 0 0]
-               :orientation 0
-               :color (random-color colors)}]
+               :orientation 0}]
     (update-in world [:snakes] conj snake)))
 
 (defn remove-snake [world id]
   (letfn [(remove-by-id [snakes]
             (remove #(= id (:id %)) snakes))]
-   (update-in world [:snakes] remove-by-id)))
-
-(defn update-player [player-to-update dir {:keys [snakes]}]
-  (map (fn [{:keys [id] :as snake}]
-         (if (= id player-to-update)
-           (assoc snake :dir dir)
-           snake)) snakes))
-
-(defmulti handle-rotation
-  (fn [rotation command] command))
-
-(defmethod handle-rotation :up [rotation command]
-  (case (map #(mod % 360) rotation)
-    [0 0 0]   [2 + "ZYX"]
-    [0 0 90]  [2 + "ZYX"]
-    [0 0 180] [2 + "ZYX"]
-    [0 0 270] [2 + "ZYX"]
-
-    [0 90 0]  [2 + "YZX"]
-    [0 + "XYZ"]))
-
-(defmethod handle-rotation :right [rotation command]
-  (case (map #(mod % 360) rotation)
-    [0 0 0]   [1 + "ZYX"]
-    [0 90 0]  [1 + "ZYX"]
-    [0 180 0] [1 + "ZYX"]
-    [0 270 0] [1 + "ZYX"]
-    [2 + "XYZ"]))
-
-(defn flip [[i f e]]
-  (if (= f +)
-    [i - e]
-    [i + e]))
-
-(defmethod handle-rotation :down [rotation command]
-  (flip (handle-rotation rotation :up)))
-
-(defmethod handle-rotation :left [rotation command]
-  (flip (handle-rotation rotation :right)))
-
-(defn update-rotation [{:keys [snakes]} player-to-update direction]
-  (map (fn [{:keys [id] :as snake}]
-         (if (= id player-to-update)
-           (let [[i f e] (handle-rotation (:rotation snake) direction)]
-             (-> (update-in snake [:rotation] update-in [i] f 90)
-                 (assoc :euler-order e)))
-           snake)) snakes))
+    (update-in world [:snakes] remove-by-id)))
 
 (defn update-orientation [{:keys [snakes]} player-id orientation]
   (map (fn [{:keys [id] :as snake}]
@@ -219,7 +156,6 @@
 
 (defmethod handle-command :player/orbit-up
   [game-state [command id]]
-  #_(assoc game-state :snakes (update-rotation game-state id :up))
   game-state)
 
 (defmethod handle-command :player/orbit-down

@@ -24,35 +24,22 @@
 (def camera
   (let [camera (new THREE/OrthographicCamera (/ window-width -2) (/ window-width 2) (/ window-height 2) (/ window-height -2) 1 100000)
         pi (.-PI js/Math)]
-    (set! (.-x (.-position camera))
-          1600)
-    (set! (.-y (.-position camera))
-          0)
-    (set! (.-z (.-position camera))
-          0)
+    (set! (.-x (.-position camera)) 1600)
+    (set! (.-y (.-position camera)) 0)
+    (set! (.-z (.-position camera)) 0)
     (.lookAt camera (clj->js {:x 0 :y 0 :z 0}))
     camera))
 
 (def scene
-  (new THREE/Scene))
+  (THREE/Scene.))
 
 (def renderer
-  (new THREE/CanvasRenderer))
-
-(def mouse2d
-  (new THREE/Vector3 0 10000 0.5))
-
-(def projector
-  (new THREE/Projector))
-
-(def cube
-  (new THREE/CubeGeometry voxel-edge voxel-edge voxel-edge))
+  (new THREE/WebGLRenderer))
 
 (defn make-voxel [[x y z] color]
-  (let [brush-materials (clj->js [(new THREE/MeshBasicMaterial (clj->js {:vertexColors THREE/VertexColors :opacity 1.0 :color color}))
-                                  (new THREE/MeshBasicMaterial (clj->js {:color 0x000000 :wireframe true}))
-                                  ])
-        brush (.createMultiMaterialObject THREE/SceneUtils cube brush-materials)]
+  (let [brush-materials (clj->js [(new THREE/MeshBasicMaterial (clj->js {:color color}))
+                                  (new THREE/MeshBasicMaterial (clj->js {:color 0x000000 :wireframe true}))])
+        brush (.createMultiMaterialObject THREE/SceneUtils (THREE/CubeGeometry. voxel-edge voxel-edge voxel-edge) brush-materials)]
     (set! (.-isBrush brush) true)
     (set! (.-x (.-position brush)) x)
     (set! (.-y (.-position brush)) y)
@@ -60,13 +47,11 @@
     (set! (.-overdraw brush) true)
     brush))
 
-(defn animate []
-  (js/requestAnimationFrame animate)
-  (.render renderer scene camera)
-  (.update js/TWEEN))
-
-(defn deg->rad [deg]
-  (* deg (/ Math/PI 180)))
+(defn draw-bounds [container]
+  (let [size     (* voxel-edge game-dimension)
+        geometry (THREE/CubeGeometry. size size size)
+        material (THREE/MeshBasicMaterial. (clj->js {:wireframe true :color 0x000000}))]
+    (.add container (THREE/Mesh. geometry material))))
 
 (def offset-3d
   (- (* (/ game-dimension 2) voxel-edge) (/ voxel-edge 2)))
@@ -79,32 +64,6 @@
     (.setSize renderer window-width window-height)
     (.appendChild container (.-domElement renderer))
     container))
-
-(defn draw-line [geometry x y z]
-  (.push (.-vertices geometry)
-         (new THREE/Vector3 x y z)))
-
-(defn draw-grid [container scene]
-  (let [extent (* (/ game-dimension 2) voxel-edge)
-        material (new THREE/LineBasicMaterial
-                      (clj->js {:color 0xaaaaaa}))
-        geometry (new THREE/Geometry)]
-    (doseq [i (range (- extent) (inc extent) voxel-edge)]
-      (draw-line geometry 0 (- extent) i)
-      (draw-line geometry 0 extent i)
-      (draw-line geometry 0 i (- extent))
-      (draw-line geometry 0 i extent)
-      (draw-line geometry (- extent) 0 i)
-      (draw-line geometry extent 0 i)
-      (draw-line geometry i 0 (- extent))
-      (draw-line geometry i 0 extent)
-      (draw-line geometry (- extent) i 0)
-      (draw-line geometry extent i 0)
-      (draw-line geometry i (- extent) 0)
-      (draw-line geometry i extent 0)
-      (let [line (new THREE/Line geometry material)]
-        (set! (.-type line) THREE/LinePieces)
-        (.add container line)))))
 
 (defn remove-all [scene]
   (doseq [child (.-children scene)]
@@ -129,9 +88,13 @@
    (THREE/Vector3. 1 0 0)
    (THREE/Vector3. 0 0 1)])
 
+(def quaternion
+  (THREE/Quaternion.))
+
 (defn update-rotation [container orientation]
   (let [v (get vecs orientation)
-        quat (.-quaternion container)
+        ;; quat (.-quaternion container)
+        quat quaternion
         start (.clone quat)
         end (.setFromAxisAngle (THREE/Quaternion.)
                                v
@@ -150,35 +113,41 @@
     (.start forward)))
 
 (defn update-3d-view [container game-state]
-  ;; (draw-3d-walls (:walls game-state))
+  (draw-bounds container)
   (draw-3d-snakes container (:snakes game-state) (:player-id game-state))
   (draw-3d-apples container (:apples game-state))
   (let [player (first (filter #(= (:id %) (:player-id game-state))
-                                (:snakes game-state)))]
-      (update-rotation container
-                       (:orientation player))))
+                                      (:snakes game-state)))]
+            (update-rotation container
+                             (:orientation player))))
 
-(def arena
+(defn make-arena []
   (let [obj (THREE/Object3D.)]
     (set! (.-useQuaternion obj) true)
+    (set! (.-quaternion obj) quaternion)
     obj))
 
 (defn render []
   (.log js/console "Rendering")
   (.render renderer scene camera))
 
+(defn animate []
+  (js/requestAnimationFrame animate)
+  (.render renderer scene camera)
+  (.update js/TWEEN))
+
 (defn create! []
   (let [c (chan (sliding-buffer 1))
         container (create-context)
-        ;; arena (THREE/Object3D.)
-        ]
+        arena (make-arena)]
     (.appendChild (.-body js/document) container)
-    (.add scene arena)
+    
     (animate)
-    (go (loop [game-state (<! c)]
-          (remove-all arena)
-          (draw-grid arena scene)
-          (update-3d-view arena game-state)
-         
-          (recur (<! c))))
+    (go (loop [game-state (<! c) arena (make-arena)]
+          ;; (remove-all arena)
+          (.remove scene arena)
+          (let [arena (make-arena)]
+            (update-3d-view arena game-state)
+            (.add scene arena)
+            (recur (<! c) arena))))
     c))
