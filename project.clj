@@ -1,4 +1,4 @@
-(defproject torus-pong "0.1.0-SNAPSHOT"
+(defproject multisnake "0.1.0-SNAPSHOT"
   :description "A multiplayer take on the classic Game of Pong. Entry for Clojure Cup 2013."
   :url "http://pong.clojurecup.com"
   :license {:name "Eclipse Public License"
@@ -22,19 +22,18 @@
   :plugins [[lein-cljsbuild "0.3.3"]]
   :cljsbuild {:crossovers [multiplay.game.params]
               :builds
-              [{;; :notify-command ["terminal-notifier" "-title" "lein-cljsbuild" "-message"]
-                :source-paths ["src/cljs"]
+              [{:source-paths ["src/cljs"]
                 :crossover-path "src/cljx"
                 :compiler {:libs ["src/js"]
                            :output-to "resources/public/multiplay.js"
                            :pretty-print true
                            :optimizations :whitespace
-                           :foreign-libs [{:file "resources/public/three.js"
+                           :foreign-libs [{:file "resources/public/three.max.js"
                                            :provides ["three"]}
-                                          {:file "resources/public/tween.js"
+                                          {:file "resources/public/tween.max.js"
                                            :provides ["tween"]}]
-                           :externs ["resources/public/externs.js"
-                                     "resources/public/tween-extern.js"]}}]}
+                           :externs ["resources/public/three.extern.js"
+                                     "resources/public/tween.extern.js"]}}]}
   :profiles {:dev
              {:source-paths ["dev"]
               :dependencies [[org.clojure/tools.namespace "0.2.3"]

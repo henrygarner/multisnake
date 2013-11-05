@@ -2,12 +2,7 @@
   (:require [multiplay.game.params :refer [game-dimension]]
             [clojure.set :refer [difference]]))
 
-(def number-of-apples 1)
-
-(comment (set (for [x [0 (dec game-dimension)]
-                       y [0 (dec game-dimension)]
-                       z [0 (dec game-dimension)]]
-                   [x y z])))
+(def number-of-apples 10)
 
 (def initial-game-state
    {:apples #{}

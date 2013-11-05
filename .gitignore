@@ -1,3 +1,5 @@
 resources
 target
 .lein-repl-history
+.DS_Store
+.nrepl-port
